@@ -10,12 +10,25 @@ def load_voice_encoder():
     return VoiceEncoder()
 
 
+def _load_audio(audio_bytes):
+    if not audio_bytes:
+        return None, None
+
+    try:
+        return librosa.load(io.BytesIO(audio_bytes), sr=16000)
+    except Exception:
+        return None, None
+
+
 def get_voice_embedding(audio_bytes):
     try:
         encoder = load_voice_encoder()
 
-        audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=16000)
-        wav = preprocess_wav(audio)
+        audio, sr = _load_audio(audio_bytes)
+        if audio is None:
+            return None
+
+        wav = preprocess_wav(audio, source_sr=sr)
         embedding = encoder.embed_utterance(wav)
         return embedding.tolist()
     except Exception as e:
@@ -49,7 +62,10 @@ def process_bulk_audio(audio_bytes, candidates_dict, threshold=0.65):
     try:
         encoder = load_voice_encoder()
 
-        audio, sr = librosa.load(io.BytesIO(audio_bytes), sr=16000)
+        audio, sr = _load_audio(audio_bytes)
+        if audio is None:
+            return {}
+
         segments = librosa.effects.split(audio, top_db=30)
 
         identified_results = {}
@@ -60,7 +76,7 @@ def process_bulk_audio(audio_bytes, candidates_dict, threshold=0.65):
             if (end-start) < sr * 0.5:
                 continue
             segment_audio = audio[start:end]
-            wav = preprocess_wav(segment_audio)
+            wav = preprocess_wav(segment_audio, source_sr=sr)
             embedding = encoder.embed_utterance(wav)
 
 

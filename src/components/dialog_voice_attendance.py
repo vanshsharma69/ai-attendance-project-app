@@ -13,12 +13,17 @@ from datetime import datetime
 def voice_attendance_dialog(selected_subject_id):
     st.write('Record audio of students saying I am present. Then AI will recognize the students')
 
+    if not hasattr(st, 'audio_input'):
+        st.error('Your Streamlit version does not support audio recording in the browser.')
+        return
 
-    audio_data = None
-
-    audio_data = st.audio_input("Record classroom audio")
+    audio_data = st.audio_input('Record classroom audio')
 
     if st.button('Analyze Audio', width='stretch', type='primary'):
+        if not audio_data:
+            st.warning('Record classroom audio before analyzing.')
+            return
+
         with st.spinner('Prcessing Audio data'):
             enrolled_res = supabase.table('subject_students').select("*, students(*)").eq('subject_id',selected_subject_id ).execute()
             enrolled_students = enrolled_res.data
@@ -34,8 +39,16 @@ def voice_attendance_dialog(selected_subject_id):
             if not candidates_dict:
                 st.error('No enrolled students have voice profiles registerd')
                 return
-            
-            audio_bytes = audio_data.read()
+
+            try:
+                audio_bytes = audio_data.read()
+            except Exception:
+                st.error('Could not read the recorded audio.')
+                return
+
+            if not audio_bytes:
+                st.warning('Recorded audio is empty.')
+                return
 
             detected_scores = process_bulk_audio(audio_bytes, candidates_dict)
 
