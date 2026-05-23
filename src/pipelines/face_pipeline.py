@@ -26,7 +26,7 @@ def load_dlib_models():
 
 def get_face_embeddings(image_np):
     detector, sp, facerec = load_dlib_models()
-    faces = detector(image_np, 2)
+    faces = detector(image_np, 4)
 
     encodings= []
 
@@ -99,7 +99,7 @@ def predict_attendance(class_image_np):
 
         best_match_score = np.linalg.norm(student_embedding - encoding)
 
-        resemblance_threshold = 0.6
+        resemblance_threshold = 0.25
 
         if best_match_score <= resemblance_threshold:
             detected_student[predicted_id] = True
